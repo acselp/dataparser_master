@@ -1,5 +1,12 @@
 import os
+from datetime import datetime
+
 import pandas as pd
+from pyarrow import int32
+
+from excel_files import excel_files
+
+from openpyxl.utils import column_index_from_string
 
 
 def appendOrSet(arr, obj):
@@ -12,81 +19,40 @@ def appendOrSet(arr, obj):
 
     arr.append(obj)
 
-directory = "./data/"
+input_path = "./data"
 output_file = "./data/extracted_data.csv"
 
-excel_files = [
-    "2016.xlsx", "2017.xlsx"
+final_data = [
+    {
+        "id": 5,
+        "name": "Vasile",
+        "date": "20.05.22",
+        "value": 650
+    }
 ]
 
-excel_files_2 = ["2018.xlsx", "2019.xlsx", "2020.xlsx",
-    "2021.xlsx", "2022.xlsx", "2023.xlsx", "2024.xlsx"
-]
-
-cleanData = []
 
 
+for year in excel_files:
+    data = pd.read_excel(os.path.join(input_path, year['path']), sheet_name=0, names=year['columns'], index_col=[0, 1])
+    year_str = year['path'].split(".")[0]
+    year_int = int(year_str)
 
-# parsing data from rest of the years
-for file in excel_files_2:
-    file_path = os.path.join(directory, file)
-    year = file
+    columns = data.to_dict()
 
+    month = 0
+    for column in columns:
+        month += 1
+        timestamp_str = datetime(year_int, month, 15).strftime('%Y-%m-%d %H:%M:%S')
 
-    df = pd.read_excel(file_path, sheet_name=0, dtype=str, header=[2])
+        index = 0
+        for row in list(columns[column].values()):
+            final_data.append({
+                "id": list(data['T'].index.codes[0])[index],
+                "date": timestamp_str,
+                "value": row
+            })
 
-    date = df.loc[1:, df.columns.str.contains("Curent") + df.columns.str.contains("curenta")]
+            index += 1
 
-    df = pd.read_excel(file_path, sheet_name=0, dtype=str, header=[3])
-
-    names = df.loc[:, df.columns.str.contains("Nume")]
-    nr_carnet = df.loc[:, df.columns.str.contains("Nr. carnet")]
-
-    names = names.to_dict()["Nume, prenume, patronimic"]
-    nr_carnet = nr_carnet.to_dict()['Nr. carnet']
-    date.columns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-    date = date.to_dict()
-
-    for index in names:
-        object = {"name": names[index], "id": nr_carnet[index], "data": []}
-        counterData = []
-
-        for i in date:
-            counterData.append(date[i][index + 1])
-
-        object["data"] += counterData
-        appendOrSet(cleanData, object)
-
-    a = 5
-
-
-
-
-# Parsing data from 2016 and 2017
-# for file in excel_files:
-#     file_path = os.path.join(directory, file)
-#     year = file
-#
-#     df = pd.read_excel(file_path, sheet_name=0, dtype=str, header=[2])
-#     names = df.loc[:, df.columns.str.contains("Nume")]
-#     nr_carnet = df.loc[:, df.columns.str.contains("Nr. carnet")]
-#     df.to_dict()
-#     df = pd.read_excel(file_path, sheet_name=0, dtype=str, header=[1])
-#     date = df.loc[:, df.columns.str.contains("Curent")]
-#
-#     names = names.to_dict()["Nume, prenume, patronimic"]
-#     nr_carnet = nr_carnet.to_dict()['Nr. carnet']
-#     date.columns = [0,1,2,3,4,5,6,7,8,9,10,11]
-#     date = date.to_dict()
-#
-#     for index in names:
-#         object = { "name": names[index], "id": nr_carnet[index], "data": [] }
-#         counterData = []
-#
-#         for i in date:
-#             counterData.append(date[i][index])
-#
-#         object["data"] += counterData
-#         appendOrSet(cleanData, object)
-#
-#     a = 5
+    print(year_str + " done\n")
